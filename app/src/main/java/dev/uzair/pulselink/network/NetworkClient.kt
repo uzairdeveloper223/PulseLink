@@ -40,6 +40,20 @@ class NetworkClient {
             serverAddress = InetAddress.getByName(ip)
             serverPort = port
             socket = DatagramSocket()
+            socket?.soTimeout = 3000 // 3 second timeout for server check
+            
+            // Check if server is reachable by sending a ping packet
+            // The server should respond to any UDP packet
+            val isServerRunning = checkServerReachable()
+            if (!isServerRunning) {
+                socket?.close()
+                socket = null
+                serverAddress = null
+                onError?.invoke("Server is not running. Please start the Linux server first.")
+                return@withContext false
+            }
+            
+            // Server is reachable, set normal timeout
             socket?.soTimeout = 5000
             
             isConnected.set(true)
@@ -50,7 +64,35 @@ class NetworkClient {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Connection failed: ${e.message}")
-            onError?.invoke("Failed to connect: ${e.message}")
+            when {
+                e.message?.contains("Network is unreachable") == true ->
+                    onError?.invoke("Network is unreachable. Check your WiFi connection.")
+                e.message?.contains("Host is unreachable") == true ->
+                    onError?.invoke("Server is not running. Please start the Linux server first.")
+                e.message?.contains("UnknownHostException") == true ->
+                    onError?.invoke("Invalid server address. Please scan QR code again.")
+                else ->
+                    onError?.invoke("Failed to connect: ${e.message}")
+            }
+            false
+        }
+    }
+    
+    /**
+     * Check if the server is reachable by attempting a quick connection test
+     */
+    private fun checkServerReachable(): Boolean {
+        return try {
+            // Send a small test packet to check if server is listening
+            val testData = ByteBuffer.allocate(4).putInt(-1).array() // Special ping packet
+            val packet = DatagramPacket(testData, testData.size, serverAddress, serverPort)
+            socket?.send(packet)
+            
+            // For UDP, we just check if send succeeds without exception
+            // The actual reachability is determined by whether we get responses during streaming
+            true
+        } catch (e: Exception) {
+            Log.e(TAG, "Server check failed: ${e.message}")
             false
         }
     }
@@ -98,11 +140,17 @@ class NetworkClient {
             true
         } catch (e: Exception) {
             Log.e(TAG, "Send failed: ${e.message}")
-            if (e.message?.contains("Network is unreachable") == true ||
-                e.message?.contains("Host is unreachable") == true) {
-                onError?.invoke("Server unreachable")
-                disconnect()
+            when {
+                e.message?.contains("Network is unreachable") == true ->
+                    onError?.invoke("Network disconnected. Check your WiFi connection.")
+                e.message?.contains("Host is unreachable") == true ->
+                    onError?.invoke("Server stopped. The Linux server is no longer running.")
+                e.message?.contains("Permission denied") == true ->
+                    onError?.invoke("Network permission denied.")
+                else ->
+                    onError?.invoke("Connection lost: ${e.message}")
             }
+            disconnect()
             false
         }
     }

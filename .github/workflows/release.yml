@@ -49,28 +49,6 @@ jobs:
           fuse \
           libfuse2
 
-    - name: Set up Python environment
-      run: |
-        python3 -m venv venv --system-site-packages
-        source venv/bin/activate
-        pip install --upgrade pip
-        pip install pulsectl sounddevice numpy scipy qrcode Pillow netifaces
-        pip install pyinstaller
-
-    - name: Build executable with PyInstaller
-      run: |
-        source venv/bin/activate
-        cd Linux
-        pyinstaller --onefile \
-          --name pulselink \
-          --add-data "style.css:." \
-          --hidden-import=pulsectl \
-          --hidden-import=sounddevice \
-          --hidden-import=scipy.signal \
-          --hidden-import=gi \
-          --collect-all=gi \
-          main.py
-
     - name: Download AppImage tools
       run: |
         wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
@@ -80,14 +58,34 @@ jobs:
 
     - name: Create AppDir structure
       run: |
+        VERSION=${{ steps.version.outputs.version }}
+        
         mkdir -p AppDir/usr/bin
         mkdir -p AppDir/usr/share/applications
         mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
-        mkdir -p AppDir/usr/lib
+        mkdir -p AppDir/usr/lib/pulselink
         
-        cp Linux/dist/pulselink AppDir/usr/bin/
+        # Copy all Python source files
+        cp -r Linux/* AppDir/usr/lib/pulselink/
+        
+        # Create launcher script that uses system Python and GTK
+        cat > AppDir/usr/bin/pulselink << 'LAUNCHER'
+        #!/bin/bash
+        # PulseLink launcher - uses system Python and GTK
+        
+        SELF=$(readlink -f "$0")
+        HERE=${SELF%/*}
+        APPDIR=${HERE%/usr/bin}
+        
+        # Use system Python with system GTK bindings
+        export PYTHONPATH="${APPDIR}/usr/lib/pulselink:${PYTHONPATH}"
+        
+        # Run with system Python
+        exec python3 "${APPDIR}/usr/lib/pulselink/main.py" "$@"
+        LAUNCHER
         chmod +x AppDir/usr/bin/pulselink
         
+        # Desktop file
         cat > AppDir/pulselink.desktop << 'EOF'
         [Desktop Entry]
         Type=Application
@@ -100,18 +98,28 @@ jobs:
         EOF
         cp AppDir/pulselink.desktop AppDir/usr/share/applications/
         
+        # Icons
         cp Linux/Images/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png
         cp AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png AppDir/pulselink.png
         
+        # AppRun
         cat > AppDir/AppRun << 'APPRUN'
         #!/bin/bash
         SELF=$(readlink -f "$0")
         HERE=${SELF%/*}
         export PATH="${HERE}/usr/bin:${PATH}"
-        export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
         exec "${HERE}/usr/bin/pulselink" "$@"
         APPRUN
         chmod +x AppDir/AppRun
+        
+        # Create requirements installer script for first run
+        cat > AppDir/usr/lib/pulselink/install_deps.sh << 'DEPS'
+        #!/bin/bash
+        echo "Installing PulseLink dependencies..."
+        pip3 install --user pulsectl sounddevice numpy scipy qrcode Pillow netifaces
+        echo "Done! You can now run PulseLink."
+        DEPS
+        chmod +x AppDir/usr/lib/pulselink/install_deps.sh
 
     - name: Build AppImage
       run: |
@@ -122,6 +130,7 @@ jobs:
       with:
         name: linux-appimage
         path: PulseLink-*.AppImage
+
 
   build-android:
     name: Build Android APK
@@ -235,4 +244,3 @@ jobs:
         prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

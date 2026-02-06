@@ -99,6 +99,11 @@ dropdown:hover {
     border-color: #3b82f6;
 }
 
+dropdown:focus {
+    border-color: #3b82f6;
+    outline: none;
+}
+
 dropdown button {
     background: transparent;
     border: none;
@@ -116,10 +121,54 @@ dropdown popover contents {
     padding: 4px;
 }
 
+dropdown popover listview {
+    background-color: #1a1a24;
+    border: none;
+}
+
+dropdown popover listview>row {
+    border: none;
+    border-bottom: none;
+    box-shadow: none;
+    -gtk-outline-radius: 0;
+}
+
+dropdown popover listview separator {
+    background: transparent;
+    min-height: 0;
+}
+
+dropdown popover listview row {
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #e0e0f0;
+    outline: none;
+    border: none;
+}
+
+dropdown popover listview row:hover {
+    background-color: #2a2a3a;
+}
+
+dropdown popover listview row:selected {
+    background-color: #3b82f6;
+    color: white;
+    outline: none;
+    border: none;
+}
+
+dropdown popover listview row:focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
+}
+
 dropdown popover row {
     padding: 8px 12px;
     border-radius: 6px;
     color: #e0e0f0;
+    outline: none;
+    border: none;
 }
 
 dropdown popover row:hover {
@@ -129,6 +178,23 @@ dropdown popover row:hover {
 dropdown popover row:selected {
     background-color: #3b82f6;
     color: white;
+}
+
+dropdown popover row:focus {
+    outline: none;
+    border: none;
+    box-shadow: none;
+}
+
+/* Remove focus outlines globally for cleaner look */
+*:focus {
+    outline: none;
+}
+
+row:focus,
+listview row:focus {
+    outline: none;
+    box-shadow: none;
 }
 
 /* Labels */

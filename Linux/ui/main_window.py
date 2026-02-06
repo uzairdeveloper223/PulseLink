@@ -216,6 +216,21 @@ class MainWindow(Adw.ApplicationWindow):
         """Create local audio routing card with mic->speaker routing"""
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         card.add_css_class('card')
+
+        # Limitation info box
+        limit_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        limit_box.add_css_class('info-box')
+        limit_box.set_margin_top(8)
+        
+        limit_icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic")
+        limit_box.append(limit_icon)
+        
+        limit_label = Gtk.Label(label="Known Limitation: On some systems, audio may not output through speakers when headphones are connected due to hardware-level jack detection. We are investigating solutions. However, it may still work on your system - feel free to try it!")
+        limit_label.set_wrap(True)
+        limit_label.set_xalign(0)
+        limit_box.append(limit_label)
+        
+        card.append(limit_box)
         
         # Section header
         label = Gtk.Label(label="AUDIO ROUTING")
@@ -314,7 +329,7 @@ class MainWindow(Adw.ApplicationWindow):
         self.mute_headphones_check.set_active(True)
         force_box.append(self.mute_headphones_check)
         
-        # Warning/Info box
+        # Warning/Info box about force speakers
         warning_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         warning_box.add_css_class('warning-box')
         warning_box.set_margin_top(8)

@@ -2,6 +2,12 @@
 
 PulseLink is an audio streaming application that allows you to transmit audio between your Android phone and Linux computer. It supports two main modes: streaming audio from your Android phone to your Linux speakers, and routing your laptop microphone to the speakers.
 
+> **Known Limitation:** When using the Local Audio feature with headphones connected, the audio will currently not output through your laptop speakers. We are actively investigating solutions for this hardware-level limitation and will update the app once resolved.
+
+![Android App](docs/images/android_app.png)
+![Linux App](docs/images/linux_app.png)
+![Linux App](docs/images/linux_app_2.png)
+
 ## Features
 
 **Android to Linux Streaming**
@@ -62,6 +68,16 @@ Download the AppImage from the Releases page, make it executable, and run:
 ```bash
 chmod +x PulseLink-*.AppImage
 ./PulseLink-*.AppImage
+```
+
+The AppImage uses your system's Python and GTK4 libraries. If you get import errors, install the required dependencies:
+
+```bash
+# Install system dependencies (Ubuntu/Debian)
+sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 libportaudio2
+
+# Install Python packages
+pip3 install --user pulsectl sounddevice numpy scipy qrcode Pillow netifaces
 ```
 
 ## Usage
