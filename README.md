@@ -169,3 +169,7 @@ This project is open source. See the LICENSE file for details.
 ## Contributing
 
 Contributions are welcome. Please open an issue or submit a pull request on GitHub.
+
+## Developer
+
+This project is developed by Uzair Developer. [GitHub](https://github.com/uzairdeveloper223)
