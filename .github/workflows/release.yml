@@ -1,67 +1,32 @@
-name: Create Release
+name: Build and Release
 
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Tag to release (e.g., v1.0.0)'
-        required: true
 
 permissions:
   contents: write
 
 jobs:
-  build-android:
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-        cache: gradle
-        
-    - name: Grant execute permission for gradlew
-      run: chmod +x gradlew
-      
-    - name: Build debug APK
-      run: ./gradlew assembleDebug
-      
-    - name: Build release APK
-      run: ./gradlew assembleRelease
-      
-    - name: Get version name
-      id: version
-      run: |
-        VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-        
-    - name: Rename APKs
-      run: |
-        mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/PulseLink-${{ steps.version.outputs.version }}-debug.apk
-        mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/PulseLink-${{ steps.version.outputs.version }}-release.apk || true
-        
-    - name: Upload Android artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: android-apks
-        path: |
-          app/build/outputs/apk/debug/*.apk
-          app/build/outputs/apk/release/*.apk
-
   build-linux:
+    name: Build Linux AppImage
     runs-on: ubuntu-22.04
     
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "Building version: $VERSION"
       
     - name: Install system dependencies
       run: |
@@ -84,7 +49,7 @@ jobs:
           fuse \
           libfuse2
 
-    - name: Set up Python with system packages
+    - name: Set up Python environment
       run: |
         python3 -m venv venv --system-site-packages
         source venv/bin/activate
@@ -92,13 +57,7 @@ jobs:
         pip install pulsectl sounddevice numpy scipy qrcode Pillow netifaces
         pip install pyinstaller
 
-    - name: Get version
-      id: version
-      run: |
-        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-    - name: Build with PyInstaller
+    - name: Build executable with PyInstaller
       run: |
         source venv/bin/activate
         cd Linux
@@ -156,75 +115,124 @@ jobs:
 
     - name: Build AppImage
       run: |
-        ARCH=x86_64 ./appimagetool/AppRun AppDir PulseLink-${{ steps.version.outputs.version }}-x86_64.AppImage
+        ARCH=x86_64 ./appimagetool/AppRun AppDir PulseLink-${{ steps.version.outputs.version }}-linux-x86_64.AppImage
 
-    - name: Upload Linux artifacts
+    - name: Upload Linux artifact
       uses: actions/upload-artifact@v4
       with:
         name: linux-appimage
         path: PulseLink-*.AppImage
 
-  release:
-    needs: [build-android, build-linux]
+  build-android:
+    name: Build Android APK
     runs-on: ubuntu-latest
+    needs: build-linux
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
       
-    - name: Get version
-      id: version
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build debug APK
+      run: ./gradlew assembleDebug
+      
+    - name: Build release APK
+      run: ./gradlew assembleRelease
+      
+    - name: Rename APKs with version
       run: |
-        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
-        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        VERSION=${{ needs.build-linux.outputs.version }}
+        mkdir -p output
+        cp app/build/outputs/apk/debug/app-debug.apk output/PulseLink-${VERSION}-android-debug.apk
+        # Handle both signed and unsigned release APKs
+        if [ -f app/build/outputs/apk/release/app-release.apk ]; then
+          cp app/build/outputs/apk/release/app-release.apk output/PulseLink-${VERSION}-android-release.apk
+        elif [ -f app/build/outputs/apk/release/app-release-unsigned.apk ]; then
+          cp app/build/outputs/apk/release/app-release-unsigned.apk output/PulseLink-${VERSION}-android-release.apk
+        fi
+        
+    - name: Upload Android artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apks
+        path: output/*.apk
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-linux, build-android]
     
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Download Linux artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-appimage
+        path: release
+        
     - name: Download Android artifacts
       uses: actions/download-artifact@v4
       with:
         name: android-apks
-        path: android
+        path: release
         
-    - name: Download Linux artifacts
-      uses: actions/download-artifact@v4
-      with:
-        name: linux-appimage
-        path: linux
-        
-    - name: List artifacts
+    - name: List release files
       run: |
-        echo "Android APKs:"
-        find android -name "*.apk" -type f
-        echo ""
-        echo "Linux AppImage:"
-        find linux -name "*.AppImage" -type f
+        echo "Release files:"
+        ls -la release/
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ github.ref_name }}
-        name: PulseLink v${{ steps.version.outputs.version }}
+        name: PulseLink v${{ needs.build-linux.outputs.version }}
         body: |
-          ## PulseLink v${{ steps.version.outputs.version }}
+          # PulseLink v${{ needs.build-linux.outputs.version }}
           
-          Stream audio between your Android phone and Linux computer.
+          Stream audio between your Android phone and Linux computer over WiFi.
           
-          ### Downloads
+          ## Downloads
           
-          **Android**
-          - `PulseLink-*-release.apk` - Release build (recommended)
-          - `PulseLink-*-debug.apk` - Debug build
+          | Platform | File | Description |
+          |----------|------|-------------|
+          | Android | `PulseLink-${{ needs.build-linux.outputs.version }}-android-release.apk` | Release build for Android |
+          | Android | `PulseLink-${{ needs.build-linux.outputs.version }}-android-debug.apk` | Debug build for Android |
+          | Linux | `PulseLink-${{ needs.build-linux.outputs.version }}-linux-x86_64.AppImage` | AppImage for Linux x86_64 |
           
-          **Linux**
-          - `PulseLink-*-x86_64.AppImage` - AppImage for Linux x86_64
+          ## Installation
           
-          ### Installation
+          ### Android
+          1. Download the APK file
+          2. Enable "Install from unknown sources" if prompted
+          3. Install and open the app
+          4. Grant microphone and camera permissions
           
-          **Android**: Download the APK and install it on your device. You may need to enable "Install from unknown sources".
+          ### Linux
+          1. Download the AppImage file
+          2. Make it executable: `chmod +x PulseLink-*.AppImage`
+          3. Run it: `./PulseLink-*.AppImage`
           
-          **Linux**: Download the AppImage, make it executable (`chmod +x PulseLink-*.AppImage`), and run it.
-        files: |
-          android/**/*.apk
-          linux/*.AppImage
-        generate_release_notes: true
+          ## Features
+          - Stream audio from Android microphone to Linux speakers
+          - Route local microphone to speakers on Linux
+          - Low-latency UDP audio transmission
+          - QR code scanning for easy connection setup
+          - Force speaker output even with headphones connected
+          
+        files: release/*
+        draft: false
+        prerelease: false
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
