@@ -1,0 +1,230 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-android:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+        
+    - name: Grant execute permission for gradlew
+      run: chmod +x gradlew
+      
+    - name: Build debug APK
+      run: ./gradlew assembleDebug
+      
+    - name: Build release APK
+      run: ./gradlew assembleRelease
+      
+    - name: Get version name
+      id: version
+      run: |
+        VERSION=$(grep 'versionName' app/build.gradle.kts | head -1 | sed 's/.*"\(.*\)".*/\1/')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - name: Rename APKs
+      run: |
+        mv app/build/outputs/apk/debug/app-debug.apk app/build/outputs/apk/debug/PulseLink-${{ steps.version.outputs.version }}-debug.apk
+        mv app/build/outputs/apk/release/app-release-unsigned.apk app/build/outputs/apk/release/PulseLink-${{ steps.version.outputs.version }}-release.apk || true
+        
+    - name: Upload Android artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apks
+        path: |
+          app/build/outputs/apk/debug/*.apk
+          app/build/outputs/apk/release/*.apk
+
+  build-linux:
+    runs-on: ubuntu-22.04
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          python3 \
+          python3-pip \
+          python3-venv \
+          python3-gi \
+          python3-gi-cairo \
+          gir1.2-gtk-4.0 \
+          gir1.2-adw-1 \
+          libgirepository1.0-dev \
+          libcairo2-dev \
+          pkg-config \
+          libpulse-dev \
+          libopus-dev \
+          libportaudio2 \
+          portaudio19-dev \
+          fuse \
+          libfuse2
+
+    - name: Set up Python with system packages
+      run: |
+        python3 -m venv venv --system-site-packages
+        source venv/bin/activate
+        pip install --upgrade pip
+        pip install pulsectl sounddevice numpy scipy qrcode Pillow netifaces
+        pip install pyinstaller
+
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Build with PyInstaller
+      run: |
+        source venv/bin/activate
+        cd Linux
+        pyinstaller --onefile \
+          --name pulselink \
+          --add-data "style.css:." \
+          --hidden-import=pulsectl \
+          --hidden-import=sounddevice \
+          --hidden-import=scipy.signal \
+          --hidden-import=gi \
+          --collect-all=gi \
+          main.py
+
+    - name: Download AppImage tools
+      run: |
+        wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+        chmod +x appimagetool-x86_64.AppImage
+        ./appimagetool-x86_64.AppImage --appimage-extract
+        mv squashfs-root appimagetool
+
+    - name: Create AppDir structure
+      run: |
+        mkdir -p AppDir/usr/bin
+        mkdir -p AppDir/usr/share/applications
+        mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
+        mkdir -p AppDir/usr/lib
+        
+        cp Linux/dist/pulselink AppDir/usr/bin/
+        chmod +x AppDir/usr/bin/pulselink
+        
+        cat > AppDir/pulselink.desktop << 'EOF'
+        [Desktop Entry]
+        Type=Application
+        Name=PulseLink
+        Comment=Stream audio between Android and Linux
+        Exec=pulselink
+        Icon=pulselink
+        Categories=AudioVideo;Audio;
+        Terminal=false
+        EOF
+        cp AppDir/pulselink.desktop AppDir/usr/share/applications/
+        
+        cp Linux/Images/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png
+        cp AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png AppDir/pulselink.png
+        
+        cat > AppDir/AppRun << 'APPRUN'
+        #!/bin/bash
+        SELF=$(readlink -f "$0")
+        HERE=${SELF%/*}
+        export PATH="${HERE}/usr/bin:${PATH}"
+        export LD_LIBRARY_PATH="${HERE}/usr/lib:${LD_LIBRARY_PATH}"
+        exec "${HERE}/usr/bin/pulselink" "$@"
+        APPRUN
+        chmod +x AppDir/AppRun
+
+    - name: Build AppImage
+      run: |
+        ARCH=x86_64 ./appimagetool/AppRun AppDir PulseLink-${{ steps.version.outputs.version }}-x86_64.AppImage
+
+    - name: Upload Linux artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-appimage
+        path: PulseLink-*.AppImage
+
+  release:
+    needs: [build-android, build-linux]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Get version
+      id: version
+      run: |
+        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Download Android artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: android-apks
+        path: android
+        
+    - name: Download Linux artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: linux-appimage
+        path: linux
+        
+    - name: List artifacts
+      run: |
+        echo "Android APKs:"
+        find android -name "*.apk" -type f
+        echo ""
+        echo "Linux AppImage:"
+        find linux -name "*.AppImage" -type f
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: PulseLink v${{ steps.version.outputs.version }}
+        body: |
+          ## PulseLink v${{ steps.version.outputs.version }}
+          
+          Stream audio between your Android phone and Linux computer.
+          
+          ### Downloads
+          
+          **Android**
+          - `PulseLink-*-release.apk` - Release build (recommended)
+          - `PulseLink-*-debug.apk` - Debug build
+          
+          **Linux**
+          - `PulseLink-*-x86_64.AppImage` - AppImage for Linux x86_64
+          
+          ### Installation
+          
+          **Android**: Download the APK and install it on your device. You may need to enable "Install from unknown sources".
+          
+          **Linux**: Download the AppImage, make it executable (`chmod +x PulseLink-*.AppImage`), and run it.
+        files: |
+          android/**/*.apk
+          linux/*.AppImage
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
