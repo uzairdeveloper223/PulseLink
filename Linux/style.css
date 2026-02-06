@@ -1,0 +1,307 @@
+/* PulseLink GTK4 Theme - Modern Dark Mode */
+
+/* Main Window */
+window {
+    background-color: #0f0f14;
+}
+
+/* Header Bar */
+headerbar {
+    background: linear-gradient(to bottom, #1a1a24, #12121a);
+    border-bottom: 1px solid #2a2a3a;
+    padding: 8px 12px;
+}
+
+headerbar title {
+    color: #e0e0f0;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+/* Cards / Boxes */
+.card {
+    background-color: #1a1a24;
+    border-radius: 16px;
+    padding: 20px;
+    margin: 12px;
+    border: 1px solid #2a2a3a;
+}
+
+.card:hover {
+    border-color: #3b82f6;
+    background-color: #1e1e2a;
+}
+
+/* Primary Button */
+.primary-button {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    color: white;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    transition: all 200ms ease;
+}
+
+.primary-button:hover {
+    background: linear-gradient(135deg, #60a5fa, #3b82f6);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+}
+
+.primary-button:active {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+}
+
+/* Danger Button */
+.danger-button {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    color: white;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.danger-button:hover {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+}
+
+/* Secondary Button */
+.secondary-button {
+    background-color: #2a2a3a;
+    color: #e0e0f0;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-weight: 500;
+    border: 1px solid #3a3a4a;
+}
+
+.secondary-button:hover {
+    background-color: #3a3a4a;
+    border-color: #4a4a5a;
+}
+
+/* Dropdown / ComboBox */
+dropdown {
+    background-color: #1a1a24;
+    border: 1px solid #3a3a4a;
+    border-radius: 10px;
+    padding: 8px 12px;
+    color: #e0e0f0;
+    min-height: 40px;
+}
+
+dropdown:hover {
+    border-color: #3b82f6;
+}
+
+dropdown button {
+    background: transparent;
+    border: none;
+    color: #e0e0f0;
+}
+
+dropdown popover {
+    background-color: #1a1a24;
+    border: 1px solid #3a3a4a;
+    border-radius: 10px;
+}
+
+dropdown popover contents {
+    background-color: #1a1a24;
+    padding: 4px;
+}
+
+dropdown popover row {
+    padding: 8px 12px;
+    border-radius: 6px;
+    color: #e0e0f0;
+}
+
+dropdown popover row:hover {
+    background-color: #2a2a3a;
+}
+
+dropdown popover row:selected {
+    background-color: #3b82f6;
+    color: white;
+}
+
+/* Labels */
+.title-label {
+    color: #e0e0f0;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.subtitle-label {
+    color: #888899;
+    font-size: 13px;
+}
+
+.section-label {
+    color: #a0a0b0;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Status Indicators */
+.status-connected {
+    color: #22c55e;
+}
+
+.status-disconnected {
+    color: #ef4444;
+}
+
+.status-waiting {
+    color: #f59e0b;
+}
+
+/* Status Dot */
+.status-dot {
+    min-width: 12px;
+    min-height: 12px;
+    border-radius: 6px;
+}
+
+.status-dot.connected {
+    background-color: #22c55e;
+    box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.status-dot.disconnected {
+    background-color: #ef4444;
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.status-dot.waiting {
+    background-color: #f59e0b;
+    box-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+/* QR Code Container */
+.qr-container {
+    background-color: white;
+    border-radius: 16px;
+    padding: 16px;
+    margin: 16px;
+}
+
+/* Audio Visualizer */
+.visualizer {
+    background-color: #12121a;
+    border-radius: 12px;
+    min-height: 60px;
+}
+
+/* Device Panel */
+.device-panel {
+    background-color: #16161e;
+    border-radius: 12px;
+    padding: 16px;
+    margin: 8px 0;
+}
+
+.device-icon {
+    color: #3b82f6;
+}
+
+/* Warning Box */
+.warning-box {
+    background-color: rgba(245, 158, 11, 0.1);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.warning-box label {
+    color: #f59e0b;
+}
+
+/* Separator */
+separator {
+    background-color: #2a2a3a;
+    min-height: 1px;
+    margin: 8px 0;
+}
+
+/* Scrollbar */
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: #3a3a4a;
+    border-radius: 4px;
+    min-width: 8px;
+}
+
+scrollbar slider:hover {
+    background-color: #4a4a5a;
+}
+
+/* Switch */
+switch {
+    background-color: #3a3a4a;
+    border-radius: 14px;
+}
+
+switch:checked {
+    background-color: #3b82f6;
+}
+
+switch slider {
+    background-color: white;
+    border-radius: 12px;
+    margin: 2px;
+}
+
+/* Spinner */
+spinner {
+    color: #3b82f6;
+}
+
+/* Info Box */
+.info-box {
+    background-color: rgba(59, 130, 246, 0.1);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.info-box label {
+    color: #60a5fa;
+}
+
+/* Checkboxes */
+checkbutton {
+    color: #e0e0f0;
+}
+
+checkbutton check {
+    background-color: #2a2a3a;
+    border: 2px solid #4a4a5a;
+    border-radius: 4px;
+    min-width: 18px;
+    min-height: 18px;
+}
+
+checkbutton:checked check {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+}
+
+checkbutton:hover check {
+    border-color: #3b82f6;
+}
+
+.force-check {
+    font-weight: 500;
+}

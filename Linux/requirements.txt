@@ -1,0 +1,22 @@
+# PulseLink Linux Application Dependencies
+
+# GTK 4 Python bindings
+PyGObject>=3.42.0
+
+# QR Code generation
+qrcode>=7.4
+Pillow>=10.0.0
+
+# Audio codec (Opus)
+opuslib>=3.0.1
+
+# PulseAudio/PipeWire control
+pulsectl>=23.5.0
+
+# Audio playback
+sounddevice>=0.4.0
+numpy>=1.24.0
+scipy>=1.10.0
+
+# Network utilities
+netifaces>=0.11.0
