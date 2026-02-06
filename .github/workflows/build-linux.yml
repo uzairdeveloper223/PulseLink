@@ -39,8 +39,7 @@ jobs:
           libportaudio2 \
           portaudio19-dev \
           fuse \
-          libfuse2 \
-          imagemagick
+          libfuse2
 
     - name: Set up Python with system packages
       run: |
@@ -102,14 +101,8 @@ jobs:
         EOF
         cp AppDir/pulselink.desktop AppDir/usr/share/applications/
         
-        # Create icon
-        if [ -f Linux/icon.png ]; then
-          cp Linux/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png
-        else
-          convert -size 256x256 xc:'#3b82f6' -fill white -gravity center \
-            -pointsize 48 -annotate 0 'PL' \
-            AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png
-        fi
+        # Copy icon
+        cp Linux/Images/icons/icon.png AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png
         cp AppDir/usr/share/icons/hicolor/256x256/apps/pulselink.png AppDir/pulselink.png
         
         # Create AppRun
