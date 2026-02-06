@@ -49,15 +49,6 @@ jobs:
           fuse \
           libfuse2
 
-    - name: Set up Python and install dependencies
-      run: |
-        # Create virtual environment with system site packages for GTK
-        python3 -m venv venv --system-site-packages
-        source venv/bin/activate
-        pip install --upgrade pip
-        # Install all required Python packages
-        pip install pulsectl sounddevice numpy scipy qrcode Pillow netifaces
-
     - name: Download AppImage tools
       run: |
         wget -q https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
@@ -73,42 +64,21 @@ jobs:
         mkdir -p AppDir/usr/share/applications
         mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
         mkdir -p AppDir/usr/lib/pulselink
-        mkdir -p AppDir/usr/lib/python3/site-packages
         
         # Copy all Python source files
         cp -r Linux/* AppDir/usr/lib/pulselink/
         
-        # Copy Python dependencies from venv
-        source venv/bin/activate
-        SITE_PACKAGES=$(python3 -c "import site; print(site.getsitepackages()[0])")
-        
-        # Copy all installed packages
-        cp -r venv/lib/python*/site-packages/* AppDir/usr/lib/python3/site-packages/ 2>/dev/null || true
-        
-        # Also copy numpy, scipy libs which may have additional files
-        for pkg in numpy scipy sounddevice pulsectl qrcode PIL netifaces; do
-          if [ -d "venv/lib/python3.10/site-packages/$pkg" ]; then
-            cp -r "venv/lib/python3.10/site-packages/$pkg" AppDir/usr/lib/python3/site-packages/
-          fi
-        done
-        
-        # Copy .so files for numpy/scipy
-        find venv/lib -name "*.so*" -exec cp {} AppDir/usr/lib/python3/site-packages/ \; 2>/dev/null || true
-        
-        # Create launcher script that uses bundled packages
+        # Create launcher script that runs bootstrap.py
         cat > AppDir/usr/bin/pulselink << 'LAUNCHER'
         #!/bin/bash
-        # PulseLink launcher - uses bundled Python packages with system GTK
+        # PulseLink launcher - runs bootstrap which handles deps
         
         SELF=$(readlink -f "$0")
         HERE=${SELF%/*}
         APPDIR=${HERE%/usr/bin}
         
-        # Set up Python path to use bundled packages first, then system
-        export PYTHONPATH="${APPDIR}/usr/lib/python3/site-packages:${APPDIR}/usr/lib/pulselink:${PYTHONPATH}"
-        
-        # Run with system Python (for GTK support)
-        exec python3 "${APPDIR}/usr/lib/pulselink/main.py" "$@"
+        # Run bootstrap with system Python (for GTK support)
+        exec python3 "${APPDIR}/usr/lib/pulselink/bootstrap.py" "$@"
         LAUNCHER
         chmod +x AppDir/usr/bin/pulselink
         

@@ -70,15 +70,13 @@ chmod +x PulseLink-*.AppImage
 ./PulseLink-*.AppImage
 ```
 
-The AppImage uses your system's Python and GTK4 libraries. If you get import errors, install the required dependencies:
+On first run, the app will prompt you to install Python dependencies. This creates a local environment in `~/.config/pulselink/` and only needs to be done once.
 
-```bash
-# Install system dependencies (Ubuntu/Debian)
-sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 libportaudio2
-
-# Install Python packages
-pip3 install --user pulsectl sounddevice numpy scipy qrcode Pillow netifaces
-```
+**System Requirements:**
+- GTK4 and libadwaita must be installed:
+  ```bash
+  sudo apt install python3-gi python3-gi-cairo gir1.2-gtk-4.0 gir1.2-adw-1 libportaudio2
+  ```
 
 ## Usage
 
