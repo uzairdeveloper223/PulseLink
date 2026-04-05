@@ -217,21 +217,6 @@ class MainWindow(Adw.ApplicationWindow):
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
         card.add_css_class('card')
 
-        # Limitation info box
-        limit_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        limit_box.add_css_class('info-box')
-        limit_box.set_margin_top(8)
-        
-        limit_icon = Gtk.Image.new_from_icon_name("dialog-information-symbolic")
-        limit_box.append(limit_icon)
-        
-        limit_label = Gtk.Label(label="Known Limitation: On some systems, audio may not output through speakers when headphones are connected due to hardware-level jack detection. We are investigating solutions. However, it may still work on your system - feel free to try it!")
-        limit_label.set_wrap(True)
-        limit_label.set_xalign(0)
-        limit_box.append(limit_label)
-        
-        card.append(limit_box)
-        
         # Section header
         label = Gtk.Label(label="AUDIO ROUTING")
         label.add_css_class('section-label')
@@ -313,36 +298,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.port_dropdown = Gtk.DropDown()
         self.port_dropdown.set_hexpand(True)
         port_section.append(self.port_dropdown)
-        
-        # Force Speakers checkbox - bypasses hardware jack sensing
-        force_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        force_box.set_margin_top(16)
-        card.append(force_box)
-        
-        self.force_speakers_check = Gtk.CheckButton(label="Force Speakers On (bypass headphone detection)")
-        self.force_speakers_check.set_active(True)  # Default to on
-        self.force_speakers_check.add_css_class('force-check')
-        force_box.append(self.force_speakers_check)
-        
-        # Mute headphones checkbox
-        self.mute_headphones_check = Gtk.CheckButton(label="Mute Headphones")
-        self.mute_headphones_check.set_active(True)
-        force_box.append(self.mute_headphones_check)
-        
-        # Warning/Info box about force speakers
-        warning_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        warning_box.add_css_class('warning-box')
-        warning_box.set_margin_top(8)
-        
-        warning_icon = Gtk.Image.new_from_icon_name("dialog-warning-symbolic")
-        warning_box.append(warning_icon)
-        
-        warning_label = Gtk.Label(label="'Force Speakers On' uses ALSA to enable speakers when headphones are connected. Enable 'Mute Headphones' to prevent audio from both outputs.")
-        warning_label.set_wrap(True)
-        warning_label.set_xalign(0)
-        warning_box.append(warning_label)
-        
-        card.append(warning_box)
         
         # Populate dropdowns
         self._populate_audio_dropdowns()
@@ -525,54 +480,43 @@ class MainWindow(Adw.ApplicationWindow):
                 self.server.start()
                 
     def _start_local_audio(self):
-        """Start local microphone → speaker routing"""
-        # Get selected input
         input_idx = self.input_dropdown.get_selected()
         if input_idx < 0 or input_idx >= len(self._input_sources):
             self._show_error("Please select an input device")
             return
-            
+
         source = self._input_sources[input_idx]
         source_name = source['name']
-        
-        # Get selected output
+
         output_idx = self.output_dropdown.get_selected()
         if output_idx < 0 or output_idx >= len(self._output_sinks):
             self._show_error("Please select an output device")
             return
-            
+
         sink = self._output_sinks[output_idx]
         sink_name = sink['name']
-        
-        # Set INPUT port if selected (for choosing between built-in mic and headphone mic)
+
         input_port_idx = self.input_port_dropdown.get_selected()
         if hasattr(self, '_current_input_ports') and self._current_input_ports:
             if 0 <= input_port_idx < len(self._current_input_ports):
                 input_port = self._current_input_ports[input_port_idx]
-                self.local_audio.set_source_port(source_name, input_port['name'])
-                print(f"Set input port to: {input_port['description']}")
-        
-        # Set OUTPUT port if selected (for choosing between speakers and headphones)
+                self.local_audio.set_source_port(
+                    source_name, input_port['name']
+                )
+
         port_idx = self.port_dropdown.get_selected()
         if hasattr(self, '_current_ports') and self._current_ports:
             if 0 <= port_idx < len(self._current_ports):
                 port = self._current_ports[port_idx]
-                self.local_audio.set_sink_port(sink_name, port['name'])
-                print(f"Set output port to: {port['description']}")
-        
-        # Force speakers on via ALSA if checkbox is checked
-        if self.force_speakers_check.get_active():
-            self.local_audio.force_speakers_on()
-            
-        # Mute headphones if checkbox is checked
-        if self.mute_headphones_check.get_active():
-            self.local_audio.mute_headphones()
-                
-        # Start loopback
+                self.local_audio.set_sink_port(
+                    sink_name, port['name']
+                )
+
         success = self.local_audio.start_loopback(
             source_name=source_name,
             sink_name=sink_name,
-            force_speaker_port=False  # We handle this with the checkboxes now
+            force_speaker_port=False,
+            mute_headphones=False
         )
         
         if success:
@@ -615,8 +559,7 @@ class MainWindow(Adw.ApplicationWindow):
         self._visualizer_timer = GLib.timeout_add(100, update_level)
         
     def _stop_simulated_visualizer(self):
-        """Stop the simulated visualizer"""
-        if hasattr(self, '_visualizer_timer'):
+        if hasattr(self, '_visualizer_timer') and self._visualizer_timer is not None:
             GLib.source_remove(self._visualizer_timer)
             self._visualizer_timer = None
             
