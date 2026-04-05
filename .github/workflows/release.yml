@@ -24,7 +24,13 @@ jobs:
     - name: Get version
       id: version
       run: |
-        VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
+        if [[ $GITHUB_REF == refs/tags/* ]]; then
+          # Extract version from tag (e.g. v1.0.1 -> 1.0.1)
+          VERSION=${GITHUB_REF_NAME#v}
+        else
+          # Fallback for manual workflow dispatch on branches
+          VERSION=$(cat VERSION 2>/dev/null || echo "1.0.0")
+        fi
         echo "version=$VERSION" >> $GITHUB_OUTPUT
         echo "Building version: $VERSION"
       
@@ -226,7 +232,6 @@ jobs:
           - Route local microphone to speakers on Linux
           - Low-latency UDP audio transmission
           - QR code scanning for easy connection setup
-          - Force speaker output even with headphones connected
           
         files: release/*
         draft: false
