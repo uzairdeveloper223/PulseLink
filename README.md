@@ -57,6 +57,7 @@ The APK will be in `app/build/outputs/apk/release/`.
 
 ```bash
 cd Linux
+sudo apt install python3-venv
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -68,6 +69,7 @@ python main.py
 Download the AppImage from the Releases page, make it executable, and run:
 
 ```bash
+sudo apt install python3-venv
 chmod +x PulseLink-*.AppImage
 ./PulseLink-*.AppImage
 ```
